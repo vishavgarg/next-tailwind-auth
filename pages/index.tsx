@@ -16,7 +16,7 @@ const Home = () => {
       setName(user ? user.name : "");
 
       const now = new Date();
-      const options = { weekday: "long" };
+      const options: Intl.DateTimeFormatOptions = { weekday: "long" };
       setToday(now.toLocaleDateString(undefined, options));
     }
   }, [router]);
