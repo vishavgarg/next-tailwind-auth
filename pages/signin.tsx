@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useRouter } from "next/router";
 import api from "../utils/api";
+import Link from "next/link";
 
 const SigninSchema = yup.object().shape({
   email: yup.string().email("Invalid email").required("Email is required"),
@@ -11,6 +12,7 @@ const SigninSchema = yup.object().shape({
 });
 
 const Signin = () => {
+  const [apiError, setApiError] = useState<string | null>(null);
   const router = useRouter();
   const {
     register,
@@ -20,12 +22,26 @@ const Signin = () => {
     resolver: yupResolver(SigninSchema),
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: { email: string; password: string }) => {
     try {
-      const userData = await api.post("/user/signin", data);
-      localStorage.setItem("user", JSON.stringify(userData.data));
-      router.push("/");
-    } catch (error) {
+      const response = await api.post("/user/signin", data);
+      if (response.status >= 200 && response.status < 300) {
+        const userData = response.data;
+        localStorage.setItem("user", JSON.stringify(userData));
+        router.push("/");
+      } else {
+        setApiError(response.data.message);
+      }
+    } catch (error: any) {
+      if (error.response) {
+        if (error.response.data && error.response.data.message) {
+          setApiError(error.response.data.message);
+        } else {
+          setApiError("An error occurred during the API request.");
+        }
+      } else {
+        setApiError("Network error. Please try again.");
+      }
       console.error(error);
     }
   };
@@ -59,12 +75,16 @@ const Signin = () => {
             <p className="text-red-600">{errors.password.message}</p>
           )}
         </div>
+        {apiError && <p className="text-red-600 mb-4">{apiError}</p>}
         <button
           type="submit"
           className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
         >
           Sign In
         </button>
+        <p className="mt-2">
+          Not registered? <Link href="/signup">Create acount</Link>
+        </p>
       </form>
     </div>
   );

@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useRouter } from "next/router";
 import api from "../utils/api";
+import Link from "next/link";
 
 const SignupSchema = yup.object().shape({
   email: yup.string().email("Invalid email").required("Email is required"),
@@ -19,6 +20,7 @@ const SignupSchema = yup.object().shape({
 
 const Signup = () => {
   const router = useRouter();
+  const [apiError, setApiError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -27,12 +29,32 @@ const Signup = () => {
     resolver: yupResolver(SignupSchema),
   });
 
-  const onSubmit = async (data: any) => {
+  interface FormData {
+    email: string;
+    name: string;
+    password: string;
+  }
+
+  const onSubmit = async (data: FormData) => {
     try {
-      const userData = await api.post("/user/signup", data);
-      localStorage.setItem("user", JSON.stringify(userData.data));
-      router.push("/");
-    } catch (error) {
+      const response = await api.post("/user/signup", data);
+      if (response.status >= 200 && response.status < 300) {
+        const userData = response.data;
+        localStorage.setItem("user", JSON.stringify(userData));
+        router.push("/");
+      } else {
+        setApiError(response.data.message);
+      }
+    } catch (error: any) {
+      if (error.response) {
+        if (error.response.data && error.response.data.message) {
+          setApiError(error.response.data.message);
+        } else {
+          setApiError("An error occurred during the API request.");
+        }
+      } else {
+        setApiError("Network error. Please try again.");
+      }
       console.error(error);
     }
   };
@@ -75,12 +97,16 @@ const Signup = () => {
             <p className="text-red-600">{errors.password.message}</p>
           )}
         </div>
+        {apiError && <p className="text-red-600 mb-4">{apiError}</p>}
         <button
           type="submit"
           className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
         >
           Sign Up
         </button>
+        <p className="mt-2">
+          Already have an account? <Link href="/signin">Login here</Link>
+        </p>
       </form>
     </div>
   );
